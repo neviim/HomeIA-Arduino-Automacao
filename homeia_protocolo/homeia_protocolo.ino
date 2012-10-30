@@ -4,13 +4,20 @@
 //
 
 #include "homeialib.h"
+#include "dht.h"
 
 int pinRele1 = 4;
 int pinRele2 = 5;
 
+int status_porta[] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}; // Status da porta On ou Off
+
+DHT dht(DHTPIN, DHTTYPE);
+
 //setup
 void setup() {
   Serial.begin(SERIALSPEED);
+
+  dht.begin(); // Inicia sensor dht22.
   
   pinMode(pinRele1, OUTPUT);
   pinMode(pinRele2, OUTPUT);
@@ -30,7 +37,7 @@ void loop() {
   
   // Le a porta serial e verifica se tem algum pacote para este modulo.
   if ( idRX_pacote() == 1 ) {
-    Serial.println( "Pacote recebido corretamente.");   
+     // Serial.println( "Pacote recebido corretamente.");   
   }
   
   delay(100); 
