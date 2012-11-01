@@ -10,13 +10,16 @@
 //  Funsao para gerar checksum
 //
 byte getChecksum(void) {
-  
   byte kSum;
-  
   //kSum = (KEYCHECKSUM - (tSum & KEYCHECKSUM));
   //Serial.println( kSum, HEX );
-
 }
+
+// Mostra a vesao do fremwork
+void versao(void) {
+    Serial.print( "Versao: " ); Serial.println( VERSAO );
+    Serial.print( "Radio.: " ); Serial.println( IDDORADIO );
+}  
 
 // Nome.....: DB_mostra_parametro
 //
@@ -24,10 +27,7 @@ byte getChecksum(void) {
 //
 // Syntax...: DB_mostra_parametro(int _i, byte _pkey, byte _pSum, long _tSum);
 //              
-// Exemplo..: if ( DEBUG == 1 ) {     // Debug
-//               DB_mostra_parametro( i, pkey[i], pSum, tSum);
-//            } 
-           
+// Exemplo..: if ( DEBUG == 1 ) { DB_mostra_parametro( i, pkey[i], pSum, tSum); }            
 // Retorna..:
 // --
 void DB_mostra_parametro(int _i, byte _pkey, byte _pSum, long _tSum) {
@@ -50,19 +50,17 @@ void DB_mostra_parametro(int _i, byte _pkey, byte _pSum, long _tSum) {
 // --
 int idRX_pacote(void) {
   
-int entrega_correta = 0; 
+  int entrega_correta = 0; 
   
-if (Serial.available() > 0) {
+  if (Serial.available() > 0) {
      
-  pckRele.inic = Serial.read();
-  //pckRele.radi = Serial.read();
+    if ( DEBUG == 1 ) { Serial.println("Passo: Serial.available => OK"); }
+    
+    pckRele.inic = Serial.read();
      
-  // Identificador de pacote.
-  if (pckRele.inic == 0x7E) { 
-       
-    // Identificado de ID do radio, cada radio xBee tem seu ID.  
-    //if( pckRele.radi == IDDORADIO || pckRele.radi == 0xFF ) {
-       
+    // Identificador de pacote.
+    if (pckRele.inic == 0x7E) { 
+      
        // declara variaveis local
        int tamanho = BYTEPACK+1;
        byte pkey[] = {};
@@ -71,6 +69,8 @@ if (Serial.available() > 0) {
        byte cSum = 0x00;
        byte pSum = 0x00;
        long tSum = 0x00;
+       
+       if ( DEBUG == 1 ) { Serial.println("Passo: 0x7E => OK"); }
        
        // arquiva pacotes de dados recebibo.
        for ( int i=1; i<=tamanho; i++) {
@@ -103,26 +103,31 @@ if (Serial.available() > 0) {
                pckRele.dad1 = pkey[i]; 
                pSum = pkey[i];
                tSum += pkey[i];
+               if ( DEBUG == 1 ) { DB_mostra_parametro( i, pkey[i], pSum, tSum); }
           }   
           if (i == 5) {
                pckRele.dad2 = pkey[i]; 
                pSum = pkey[i];
                tSum += pSum;
+               if ( DEBUG == 1 ) { DB_mostra_parametro( i, pkey[i], pSum, tSum); }
           }  
           if (i == 6) {
                pckRele.dad3 = pkey[i]; 
                pSum = pkey[i];
                tSum += pSum;    
+               if ( DEBUG == 1 ) { DB_mostra_parametro( i, pkey[i], pSum, tSum); }
           }          
           if (i == 7) {
                pckRele.dad4 = pkey[i]; 
                pSum = pkey[i];
                tSum += pSum;
+               if ( DEBUG == 1 ) { DB_mostra_parametro( i, pkey[i], pSum, tSum); }
           }               
           if (i == 8) { 
                pckRele.dad5 = pkey[i];
                pSum = pkey[i];
                tSum += pSum;
+               if ( DEBUG == 1 ) { DB_mostra_parametro( i, pkey[i], pSum, tSum); }
           }
           // fim da captura dos dados do pacote de dados.               
              
@@ -163,13 +168,13 @@ if (Serial.available() > 0) {
                         // Ativa a porta especificada.
                         if ( pckRele.dad5 == ON ) {
                            digitalWrite( pckRele.dad4, HIGH);     
-                           status_porta[pckRele.dad4] = 1; // Liga o status da porta
+                           flag[pckRele.dad4] = 1; // Liga o status da porta
                         }
                         
                         // Ativa a porta especificada.   
                         if ( pckRele.dad5 == OFF ) {
                            digitalWrite(char(pckRele.dad4), LOW); 
-                           status_porta[pckRele.dad4] = 0; // Desliga o status da porta
+                           flag[pckRele.dad4] = 0; // Desliga o status da porta
                         }
 
                      }
@@ -193,12 +198,12 @@ if (Serial.available() > 0) {
                 Serial.print( IDDORADIO, HEX ); // Origem, quem o envio.
                 Serial.print( 0x16,      HEX ); // Tamanho do pacote de dados.
                 Serial.print( 0x49,      HEX ); // ID da API, identificador do comando.
-                Serial.print( 0x5E,      HEX ); // ID do pacote dados, isso o identifica se e um pacote.
+                Serial.print( IDRETORNO, HEX ); // ID do pacote dados, isso o identifica se e um pacote.
                 
                 // transmite os dados do status da porta
                 for ( int x=0; x<=15; x++ ) {
-                    Serial.print( status_porta[x] );
-                    tSum += status_porta[x];
+                    Serial.print( flag[x] );
+                    tSum += flag[x];
                 }    
                 
                 // efetua soma do checksum dos dados a serem enviados.
@@ -206,8 +211,6 @@ if (Serial.available() > 0) {
                 Serial.println( kSum, HEX );
                 // fim do envio do pacote, Status das portas digitais
                 //
-
-
 
                 /* Sensor de temperatura/humidade, se pckRele.dad1 for 0x50
                 */
@@ -237,11 +240,11 @@ if (Serial.available() > 0) {
                     Serial.print( IDDORADIO, HEX ); // Origem, quem o envio.
                     Serial.print( 0x10,      HEX ); // Tamanho do pacote de dados.
                     Serial.print( 0x50,      HEX ); // ID da API, identificador do comando.
-                    Serial.print( 0x5F,      HEX ); // ID do pacote dados, isso o identifica se e um pacote.
+                    Serial.print( IDRETORNO, HEX ); // ID do pacote dados, isso o identifica se e um pacote.
                     Serial.print( h );              // float humidade.
                     Serial.print( t );              // float temperatura.
 
-                    tSum += (0x50 + 0x5F + h + t );
+                    tSum += (0x50 + IDRETORNO + h + t );
 
                     // efetua soma do checksum dos dados a serem enviados.
                     kSum = (KEYCHECKSUM - (tSum & KEYCHECKSUM));
@@ -250,6 +253,33 @@ if (Serial.available() > 0) {
                  } 
 
               } // end-if-HUMIDATEMPE
+              
+              /* Versao e id do modulo, se pckRele.dad1 for 0x51
+              */
+              if ( byte(pckRele.dad1) == IDVERSAO ) {
+                  
+                 entrega_correta = 1;  // validacao ok.   
+                  
+                 byte kSum = 0x00;
+                 long tSum = 0x00;
+                  
+                 // inicio da montagem e envio do pacote. 
+                 Serial.print( 0x7E,      HEX ); // Cabecalho pacote
+                 Serial.print( 0x00,      HEX ); // Destino, quem o recebera.
+                 Serial.print( IDDORADIO, HEX ); // Origem, quem o envio.
+                 Serial.print( 0x07,      HEX ); // Tamanho do pacote de dados.
+                 Serial.print( IDVERSAO,  HEX ); // ID da API, identificador do comando.
+                 Serial.print( IDRETORNO, HEX ); // ID do pacote dados, 0x5F pacote retorno.
+                 Serial.print( VERSAO );         // float humidade.
+                  
+                 tSum += (IDDORADIO + IDRETORNO + VERSAO );
+                  
+                 // efetua soma do checksum dos dados a serem enviados.
+                 kSum = (KEYCHECKSUM - (tSum & KEYCHECKSUM));
+                 Serial.println( kSum, HEX );
+                 // fim do envio do pacote, Status das portas digitais
+                  
+              } // end-if-versao
               
           } // end-if-IDDADO 
 
@@ -277,11 +307,12 @@ if (Serial.available() > 0) {
            Serial.print( "CheckSum....: " ); Serial.println( checkSum, HEX );
            Serial.println(byte(pckRele.csum) == byte(checkSum) ? " -- Ok." : " -- Erro.");
        } // end-if-DEBUG
-
-     }
     
-  }
-   
- return entrega_correta;
-}
+     } // end-if-idpacote 0x7E
+  
+  } // end-if-Serial.available()
+  
+  return entrega_correta;
+  
+} // end-funcao-idRX_pacote
 
